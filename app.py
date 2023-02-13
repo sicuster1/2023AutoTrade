@@ -11,11 +11,11 @@ class Binance:
     def __init__(self, public_key = '', secret_key = '', sync = False):
         self.time_offset = 0
         self.b = Client(public_key, secret_key, tld='com')
-        self.b.API_URL = 'https://testnet.binance.vision/api' # for testnet
+        #self.b.API_URL = 'https://testnet.binance.vision/api' # for testnet
 
         if sync:
             self.time_offset = self._get_time_offset()
-            print( "Offset: %s ms" % (self.time_offset) )
+            print( f"Offset: {self.time_offset} ms")
 
     def _get_time_offset(self):
         res = self.b.get_server_time()
@@ -23,7 +23,8 @@ class Binance:
         return res['serverTime'] - int(time.time() * 1000)
 
     def synced(self, fn_name, **args):
-        args['timestamp'] = int(time.time() *1000 + self.time_offset)
+        args['timestamp'] = int(time.time() - self.time_offset)
+        print (f"API Request Time = {args['timestamp']}, offset = {self.time_offset}")
         return getattr(self.b, fn_name)(**args)
 
 app = Flask(__name__)
@@ -75,7 +76,7 @@ def webhook_reset():
     
     if position_side.upper() != 'ZERO':
         #대기중인 주문 종료 
-        binanceClient.futures_cancel_all_open_orders(symbol=order_ticker, recvwindow=60000)
+        binanceClient.synced('futures_cancel_all_open_orders', symbol=order_ticker, recvwindow=60000)
         # 현재 포지션 종료 
         close_amt = closecommand('FULL', position_amt)
         close_responce = closeOrder(changeside(position_side), float(round(close_amt, 0)), order_ticker)
