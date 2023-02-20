@@ -6,6 +6,7 @@ from binance.enums import *
 from urllib.parse import quote
 from json import dumps
 import time
+from time import sleep
 
 class Binance:
     def __init__(self, public_key = '', secret_key = '', sync = False):
