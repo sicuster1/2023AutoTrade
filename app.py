@@ -7,6 +7,7 @@ from urllib.parse import quote
 from json import dumps
 import time
 from time import sleep
+from datetime import datetime
 
 class Binance:
     def __init__(self, public_key = '', secret_key = '', sync = False):
@@ -20,11 +21,16 @@ class Binance:
 
     def _get_time_offset(self):
         res = self.b.get_server_time()
-        print(f"server_time : {res}")
         return res['serverTime'] - int(time.time() * 1000)
 
     def synced(self, fn_name, **args):
-        args['timestamp'] = int(time.time() - self.time_offset)
+        args['timestamp'] = int(time.time()*1000 - self.time_offset)
+        res = self.b.get_server_time()
+        serverDate = datetime.utcfromtimestamp(res['serverTime'] / 1000.0).strftime('%Y-%m-%d %H:%M:%S')
+        clientDate = datetime.utcfromtimestamp(int(args['timestamp'] / 1000.0)).strftime('%Y-%m-%d %H:%M:%S')
+
+        print(f"ClientTime : {clientDate}")
+        print(f"ServerTime : {serverDate}")
         print (f"API Request Time = {args['timestamp']}, offset = {self.time_offset}")
         return getattr(self.b, fn_name)(**args)
 
@@ -600,10 +606,6 @@ def symbolPrecision(symbol) :
         return 1
     elif symbol.upper() == 'BTCUSDT':
         return 3
-
-
-    
-
 
 if __name__ == "__main__":
     app.run()
