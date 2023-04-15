@@ -24,7 +24,7 @@ class Binance:
         return res['serverTime'] - int(time.time() * 1000)
 
     def synced(self, fn_name, **args):
-        args['timestamp'] = int(time.time()*1000 - (self.time_offset + 2000))
+        args['timestamp'] = int(time.time()*1000 - (self.time_offset + 4000))
         res = self.b.get_server_time()
         serverDate = datetime.utcfromtimestamp(res['serverTime'] / 1000.0).strftime('%Y-%m-%d %H:%M:%S')
         clientDate = datetime.utcfromtimestamp(int(args['timestamp'] / 1000.0)).strftime('%Y-%m-%d %H:%M:%S')
