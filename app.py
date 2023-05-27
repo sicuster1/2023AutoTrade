@@ -188,6 +188,13 @@ def webhookClose():
     position_entry_price = float(position['entryPrice'])
     position_side = getpoitionside(position_amt)
 
+    if position_side == "ZERO" :
+        return{
+              "code": "error",
+              "message": "buy/sell position_side empty",
+        }
+    
+
    
     print('>>>>> Close Poisition Info <<<<<')
     print(f'     [amt] : {position_amt}, [entry] : {position_entry_price}, [side] : {position_side}')
