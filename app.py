@@ -21,11 +21,11 @@ class Binance:
 
     def _get_time_offset(self):
         res = self.b.get_server_time()
-        return res['serverTime'] - int(time.time() * 1000)
+        return res['serverTime'] - int(time.time() * 1000 + 1500)
 
     def synced(self, fn_name, **args):
-        args['timestamp'] = int(time.time()*1000 + (self.time_offset + 1500))
         res = self.b.get_server_time()
+        args['timestamp'] = res['serverTime'] + self.time_offset
         serverDate = datetime.utcfromtimestamp(res['serverTime'] / 1000.0).strftime('%Y-%m-%d %H:%M:%S')
         clientDate = datetime.utcfromtimestamp(int(args['timestamp'] / 1000.0)).strftime('%Y-%m-%d %H:%M:%S')
 
