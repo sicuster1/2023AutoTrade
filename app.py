@@ -3,6 +3,7 @@ import json, config
 from flask import Flask, request, jsonify
 from binance.client import Client
 from binance.enums import *
+from binance.helpers import round_step_size
 from urllib.parse import quote
 from json import dumps
 import time
@@ -43,123 +44,7 @@ binanceClient = Binance(config.API_KEY, config.API_SECRET, True)
 def hello_world():
     return 'Hello from YSB Trade World'
 
-@app.route('/position/resetopen', methods=['POST'])
-def webhook_reset():
-    #print(request.data)
-    data = json.loads(request.data)
-    if data['passphrase'] != config.WEBHOOK_PASSPHRASE:
-        return{
-            "code" : "error",
-            "message" : "Nice try, invalid passphrase"
-        }
-
-    bar_open_pirce = data['bar']['open']
-    bar_cur_price = data['bar']['high']
-    order_side = data['strategy']['order_action'].upper()
-    order_command = data['strategy']['order_command'].upper()
-    order_division = data['strategy']['order_division']
-    order_ticker = data['ticker']
-
-    print(order_ticker)
-    print(order_side)
-    print(order_command)
-    print(bar_cur_price)
-    print(order_division)
-
-    #order_stop_price = calcstopprice(order_side, bar_cur_price, order_stop_percent, 4)
-
-    position = getpositions(order_ticker)
-    print(position)
-
-    position_amt = float(position['positionAmt'])
-    position_notional = float(position['notional'])
-    position_entry_price = float(position['entryPrice'])
-    position_side = getpoitionside(position_amt)
-    position_leverage = position['leverage']
-
-    print('>>>>> Open Poisition Info <<<<<')
-    print(f'     [notional] : {position_notional}, [amt] : {position_amt}, [entry] : {position_entry_price}, [side] : {position_side}')
-
-    
-    if position_side.upper() != 'ZERO':
-        #대기중인 주문 종료 
-        binanceClient.synced('futures_cancel_all_open_orders', symbol=order_ticker, recvwindow=60000)
-        # 현재 포지션 종료 
-        close_amt = closecommand('FULL', position_amt)
-        close_responce = closeOrder(changeside(position_side), float(round(close_amt, 0)), order_ticker)
-        if close_responce == False : 
-             print("close order failed")
-             return {
-                "code": "closeorder",
-                "error"  : "error",
-                "message": "close order failed",
-             }
-
-    # 잔고계산
-    usdt_balance = float(calcBalanceCommand('USDT', position_leverage, order_command, order_division))
-    print(f'>>>>> usdt * leverage = {usdt_balance}')
-    #usdt_balance = 5000
-    order_final_amt_round = usdt_balance / bar_cur_price
-    order_final_amt = float(round(order_final_amt_round, symbolPrecision(order_ticker)))
-  
-    # 테스트 시 사용 Amount
-    #order_final_amt = 1000
-
-    print(f'>>>>> calcuate final, usdt_balance = {usdt_balance}, order_final_amt = {order_final_amt}')
-        
-    # 진입주문
-    #order_first_balance = float(round((order_final_amt), 0)) 
-    order_response= order(order_side, order_final_amt, order_ticker, ORDER_TYPE_MARKET)
-    print(order_response)
-    if order_response == False :
-        print("order failed")
-        return {
-            "code": "order",
-            "error"  : "error",
-            "message": "order failed",
-            }
-    else :
-        print("order excute success")
-        return {
-        "code": "success",
-        "error"  : "",
-        "message": "order excute success",
-        }
-
-
-    
-    # 손절주문 1
-    # order_stop_price = calcstopprice(order_side, bar_cur_price, float(2.5), 4)
-    # stop_order_res1 = stopOrder(changeside(order_side), order_final_amt/2, order_ticker, order_stop_price)
-    # print(stop_order_res1)
-    # if stop_order_res1 == False :
-    #     print("stop order1 failed")
-    #     return {
-    #         "code": "stop order1 ",
-    #         "error"  : "error",
-    #         "message": "stop order1 failed",
-    # }
-
-    # 손절주문 2
-    # order_stop_price = calcstopprice(order_side, bar_cur_price, float(2.0), 4)
-    # stop_order_res2 = stopOrder(changeside(order_side), order_final_amt/2, order_ticker, order_stop_price)
-    # print(stop_order_res2)
-    # if stop_order_res2 == False :
-    #     print("stop order2 failed")
-    #     return {
-    #         "code": "stop order2 ",
-    #         "error"  : "error",
-    #         "message": "stop order2 failed",
-    #     }
-    # else :
-    #     print("order success")
-    #     return {
-    #         "code": "order",
-    #         "error"  : "success",
-    #         "message": "all order success",
-    #     }
-
-
+############################### Close Order ###############################################
 @app.route('/position/close', methods=['POST'])
 def webhookClose():
     #print(request.data)
@@ -173,12 +58,14 @@ def webhookClose():
     print(data['ticker'])
     print(data['bar'])
     print(data['strategy']['order_command'])
-
+    
     
     order_ticker = data['ticker']
     order_command = data['strategy']['order_command']
 
-    print('>>>>> Close Order Info <<<<<')
+    #get_precision(order_ticker)
+
+    print('>>>>> Close Order Try <<<<<')
     print(f'     [ticker] : {order_ticker}, [command] : {order_command}')
     
     position = getpositions(order_ticker)
@@ -196,14 +83,14 @@ def webhookClose():
     
 
    
-    print('>>>>> Close Poisition Info <<<<<')
-    print(f'     [amt] : {position_amt}, [entry] : {position_entry_price}, [side] : {position_side}')
+    print('>>>>> Current Poisition Info <<<<<')
+    print(f'[amt] : {position_amt}, [entry] : {position_entry_price}, [side] : {position_side}')
 
     order_final_amt = closecommand(order_command, position_amt)
     
     
 
-    order_response =closeOrder(changeside(position_side), float(round(order_final_amt, 0)), order_ticker)
+    order_response =closeOrder(changeside(position_side), float(round(order_final_amt, symbolPrecision(order_ticker))), order_ticker)
 
     print(order_response)
 
@@ -222,6 +109,7 @@ def webhookClose():
             #"compare_side" : compare_side
         }
 
+############################### Check Order ###############################################
 @app.route('/position/check', methods=['POST'])
 def webhookCheck():
     data = json.loads(request.data)
@@ -324,92 +212,9 @@ def webhookCheck():
             "messge": "order == postion same side",
             #"compare_side": compare_side
         }
+############################### Check Order ###############################################
 
-# @app.route('/position/reverse', methods=['POST'])
-# def webhookReverse():
-#     data = json.loads(request.data)
-#     if data['passphrase'] != config.WEBHOOK_PASSPHRASE:
-#         return{
-#             "code" : "error",
-#             "message" : "Nice try, invalid passphrase"
-#         }
-    
-#     #order_side = data['strategy']['order_action'].upper()
-#     order_ticker = data['ticker']
 
-#     print(order_ticker)
-#     #print(order_side)
-    
-#     bar_open_pirce = data['bar']['open']
-#     bar_cur_price = data['bar']['high']
-#     #order_side = data['strategy']['order_action'].upper()
-#     order_command = data['strategy']['order_command'].upper()
-#     order_division = data['strategy']['order_division']
-#     order_ticker = data['ticker']
-
-#     print(order_ticker)
-#     #print(order_side)
-#     print(order_command)
-#     print(bar_cur_price)
-#     print(order_division)
-
-#     position = getpositions(order_ticker)
-#     print(position)
-
-#     position_amt = float(position['positionAmt'])
-#     position_notional = float(position['notional'])
-#     position_entry_price = float(position['entryPrice'])
-#     position_side = getpoitionside(position_amt)
-#     position_leverage = position['leverage']
-
-#     print('>>>>> Open Poisition Info <<<<<')
-#     print(f'     [notional] : {position_notional}, [amt] : {position_amt}, [entry] : {position_entry_price}, [side] : {position_side}')
-
-    
-#     if position_side.upper() != 'ZERO':
-#         #대기중인 주문 종료 
-#         binanceClient.futures_cancel_all_open_orders(symbol=order_ticker, recvwindow=60000)
-#         # 현재 포지션 종료 
-#         close_amt = closecommand('FULL', position_amt)
-#         close_responce = closeOrder(changeside(position_side), float(round(close_amt, 0)), order_ticker)
-#         if close_responce == False : 
-#              print("close order failed")
-#              return {
-#                 "code": "closeorder",
-#                 "error"  : "error",
-#                 "message": "close order failed",
-#              }
-
-#     # 잔고계산
-#     usdt_balance = float(calcBalanceCommand('USDT', position_leverage, order_command, order_division))
-#     print(f'>>>>> usdt * leverage = {usdt_balance}')
-#     #usdt_balance = 5000
-#     order_final_amt_round = usdt_balance / bar_cur_price
-#     order_final_amt = float(round(order_final_amt_round, symbolPrecision(order_ticker)))
-  
-#     # 테스트 시 사용 Amount
-#     #order_final_amt = 1000
-
-#     print(f'>>>>> calcuate final, usdt_balance = {usdt_balance}, order_final_amt = {order_final_amt}')
-        
-#     # 진입주문
-#     #order_first_balance = float(round((order_final_amt), 0)) 
-#     order_response= order(changeside(position_side), order_final_amt, order_ticker, ORDER_TYPE_MARKET)
-#     print(order_response)
-#     if order_response == False :
-#         print("order failed")
-#         return {
-#             "code": "order",
-#             "error"  : "error",
-#             "message": "order failed",
-#             }
-#     else :
-#         print("order excute success")
-#         return {
-#         "code": "success",
-#         "error"  : "",
-#         "message": "order excute success",
-#         }
 
 ############################################################################### API End ############################################################################
 
@@ -424,6 +229,13 @@ def order(side, quantity, symbol, order_type):
         return False
 
     return order
+
+ 
+def get_precision(symbol):
+   info = binanceClient.synced('futures_exchange_info')
+   for x in info['symbols']:
+    if x['symbol'] == symbol:
+        return x['quantityPrecision']
 
 def limitOrder(side, quantity, symbol, order_type, price):
     try:
@@ -496,13 +308,13 @@ def closecommand(command, positonAmt) :
         return float(calc_amt) + float(1)
     elif command.upper() == 'HALF':
         print('closecommnd-HALF')
-        return float(calc_amt)/2
+        return float(calc_amt) / float(2)
     elif command.upper() == 'QUTOR':
         print('closecommnd-QUTOR')
-        return float(calc_amt)/4
+        return float(calc_amt)/ float(4)
     elif command.upper() == '10TH':
         print('closecommnd-10TH')
-        return float(calc_amt)/13
+        return float(calc_amt)/ float(13)
     else:
         print("ERROR - closecommand is zero")
         return 0
@@ -613,6 +425,213 @@ def symbolPrecision(symbol) :
         return 1
     elif symbol.upper() == 'BTCUSDT':
         return 3
+    else:
+        return 0
 
 if __name__ == "__main__":
     app.run()
+
+
+# @app.route('/position/resetopen', methods=['POST'])
+# def webhook_reset():
+#     #print(request.data)
+#     data = json.loads(request.data)
+#     if data['passphrase'] != config.WEBHOOK_PASSPHRASE:
+#         return{
+#             "code" : "error",
+#             "message" : "Nice try, invalid passphrase"
+#         }
+
+#     bar_open_pirce = data['bar']['open']
+#     bar_cur_price = data['bar']['high']
+#     order_side = data['strategy']['order_action'].upper()
+#     order_command = data['strategy']['order_command'].upper()
+#     order_division = data['strategy']['order_division']
+#     order_ticker = data['ticker']
+
+#     print(order_ticker)
+#     print(order_side)
+#     print(order_command)
+#     print(bar_cur_price)
+#     print(order_division)
+
+#     #order_stop_price = calcstopprice(order_side, bar_cur_price, order_stop_percent, 4)
+
+#     position = getpositions(order_ticker)
+#     print(position)
+
+#     position_amt = float(position['positionAmt'])
+#     position_notional = float(position['notional'])
+#     position_entry_price = float(position['entryPrice'])
+#     position_side = getpoitionside(position_amt)
+#     position_leverage = position['leverage']
+
+#     print('>>>>> Open Poisition Info <<<<<')
+#     print(f'     [notional] : {position_notional}, [amt] : {position_amt}, [entry] : {position_entry_price}, [side] : {position_side}')
+
+    
+#     if position_side.upper() != 'ZERO':
+#         #대기중인 주문 종료 
+#         binanceClient.synced('futures_cancel_all_open_orders', symbol=order_ticker, recvwindow=60000)
+#         # 현재 포지션 종료 
+#         close_amt = closecommand('FULL', position_amt)
+#         close_responce = closeOrder(changeside(position_side), float(round(close_amt, 0)), order_ticker)
+#         if close_responce == False : 
+#              print("close order failed")
+#              return {
+#                 "code": "closeorder",
+#                 "error"  : "error",
+#                 "message": "close order failed",
+#              }
+
+#     # 잔고계산
+#     usdt_balance = float(calcBalanceCommand('USDT', position_leverage, order_command, order_division))
+#     print(f'>>>>> usdt * leverage = {usdt_balance}')
+#     #usdt_balance = 5000
+#     order_final_amt_round = usdt_balance / bar_cur_price
+#     order_final_amt = float(round(order_final_amt_round, symbolPrecision(order_ticker)))
+  
+#     # 테스트 시 사용 Amount
+#     #order_final_amt = 1000
+
+#     print(f'>>>>> calcuate final, usdt_balance = {usdt_balance}, order_final_amt = {order_final_amt}')
+        
+#     # 진입주문
+#     #order_first_balance = float(round((order_final_amt), 0)) 
+#     order_response= order(order_side, order_final_amt, order_ticker, ORDER_TYPE_MARKET)
+#     print(order_response)
+#     if order_response == False :
+#         print("order failed")
+#         return {
+#             "code": "order",
+#             "error"  : "error",
+#             "message": "order failed",
+#             }
+#     else :
+#         print("order excute success")
+#         return {
+#         "code": "success",
+#         "error"  : "",
+#         "message": "order excute success",
+#         }
+
+
+    
+    # 손절주문 1
+    # order_stop_price = calcstopprice(order_side, bar_cur_price, float(2.5), 4)
+    # stop_order_res1 = stopOrder(changeside(order_side), order_final_amt/2, order_ticker, order_stop_price)
+    # print(stop_order_res1)
+    # if stop_order_res1 == False :
+    #     print("stop order1 failed")
+    #     return {
+    #         "code": "stop order1 ",
+    #         "error"  : "error",
+    #         "message": "stop order1 failed",
+    # }
+
+    # 손절주문 2
+    # order_stop_price = calcstopprice(order_side, bar_cur_price, float(2.0), 4)
+    # stop_order_res2 = stopOrder(changeside(order_side), order_final_amt/2, order_ticker, order_stop_price)
+    # print(stop_order_res2)
+    # if stop_order_res2 == False :
+    #     print("stop order2 failed")
+    #     return {
+    #         "code": "stop order2 ",
+    #         "error"  : "error",
+    #         "message": "stop order2 failed",
+    #     }
+    # else :
+    #     print("order success")
+    #     return {
+    #         "code": "order",
+    #         "error"  : "success",
+    #         "message": "all order success",
+    #     }
+
+
+############################### Close Order ###############################################
+# @app.route('/position/reverse', methods=['POST'])
+# def webhookReverse():
+#     data = json.loads(request.data)
+#     if data['passphrase'] != config.WEBHOOK_PASSPHRASE:
+#         return{
+#             "code" : "error",
+#             "message" : "Nice try, invalid passphrase"
+#         }
+    
+#     #order_side = data['strategy']['order_action'].upper()
+#     order_ticker = data['ticker']
+
+#     print(order_ticker)
+#     #print(order_side)
+    
+#     bar_open_pirce = data['bar']['open']
+#     bar_cur_price = data['bar']['high']
+#     #order_side = data['strategy']['order_action'].upper()
+#     order_command = data['strategy']['order_command'].upper()
+#     order_division = data['strategy']['order_division']
+#     order_ticker = data['ticker']
+
+#     print(order_ticker)
+#     #print(order_side)
+#     print(order_command)
+#     print(bar_cur_price)
+#     print(order_division)
+
+#     position = getpositions(order_ticker)
+#     print(position)
+
+#     position_amt = float(position['positionAmt'])
+#     position_notional = float(position['notional'])
+#     position_entry_price = float(position['entryPrice'])
+#     position_side = getpoitionside(position_amt)
+#     position_leverage = position['leverage']
+
+#     print('>>>>> Open Poisition Info <<<<<')
+#     print(f'     [notional] : {position_notional}, [amt] : {position_amt}, [entry] : {position_entry_price}, [side] : {position_side}')
+
+    
+#     if position_side.upper() != 'ZERO':
+#         #대기중인 주문 종료 
+#         binanceClient.futures_cancel_all_open_orders(symbol=order_ticker, recvwindow=60000)
+#         # 현재 포지션 종료 
+#         close_amt = closecommand('FULL', position_amt)
+#         close_responce = closeOrder(changeside(position_side), float(round(close_amt, 0)), order_ticker)
+#         if close_responce == False : 
+#              print("close order failed")
+#              return {
+#                 "code": "closeorder",
+#                 "error"  : "error",
+#                 "message": "close order failed",
+#              }
+
+#     # 잔고계산
+#     usdt_balance = float(calcBalanceCommand('USDT', position_leverage, order_command, order_division))
+#     print(f'>>>>> usdt * leverage = {usdt_balance}')
+#     #usdt_balance = 5000
+#     order_final_amt_round = usdt_balance / bar_cur_price
+#     order_final_amt = float(round(order_final_amt_round, symbolPrecision(order_ticker)))
+  
+#     # 테스트 시 사용 Amount
+#     #order_final_amt = 1000
+
+#     print(f'>>>>> calcuate final, usdt_balance = {usdt_balance}, order_final_amt = {order_final_amt}')
+        
+#     # 진입주문
+#     #order_first_balance = float(round((order_final_amt), 0)) 
+#     order_response= order(changeside(position_side), order_final_amt, order_ticker, ORDER_TYPE_MARKET)
+#     print(order_response)
+#     if order_response == False :
+#         print("order failed")
+#         return {
+#             "code": "order",
+#             "error"  : "error",
+#             "message": "order failed",
+#             }
+#     else :
+#         print("order excute success")
+#         return {
+#         "code": "success",
+#         "error"  : "",
+#         "message": "order excute success",
+#         }
