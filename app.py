@@ -10,6 +10,8 @@ import time
 from time import sleep
 from datetime import datetime
 
+symbol_map: dict = {}
+
 class Binance:
     def __init__(self, public_key = '', secret_key = '', sync = False):
         self.time_offset = 0
@@ -106,6 +108,105 @@ def webhookClose():
         return {
             "code": "error",
             "message": "cloeorder failed",
+            #"compare_side" : compare_side
+        }
+    
+############################### CloseOnce Reset Order ###############################################
+@app.route('/position/closeonce_reset', methods=['POST'])
+def webhookCloseOnce_Reset():
+    data = json.loads(request.data)
+    if data['passphrase'] != config.WEBHOOK_PASSPHRASE:
+        return{
+            "code" : "error",
+            "message" : "Nice try, invalid passphrase"
+        }
+    
+    print(data['ticker'])
+    print(data['bar'])
+    print(data['strategy']['order_command'])
+
+    req_ticker = data['ticker']
+    req_period = data['strategy']['period']
+
+    key = f"{req_ticker}_{req_period}"
+    symbol_map[key] = False
+    
+    return {
+        "code": "success",
+        "messge": "closeonce order excute",
+        "key" : key
+    }
+
+############################### CloseOnce Order ###############################################
+@app.route('/position/closeonce', methods=['POST'])
+def webhookCloseOnce():
+    #print(request.data)
+    data = json.loads(request.data)
+    if data['passphrase'] != config.WEBHOOK_PASSPHRASE:
+        return{
+            "code" : "error",
+            "message" : "Nice try, invalid passphrase"
+        }
+
+    print(data['ticker'])
+    print(data['bar'])
+    print(data['strategy']['order_command'])
+    
+    
+    order_ticker = data['ticker']
+    order_command = data['strategy']['order_command']
+    order_period = data['strategy']['period']
+
+    key = f"{order_ticker}_{order_period}"
+    if key not in symbol_map: # 첫 번째
+        symbol_map[key] = False
+    elif symbol_map[key] == False: # 두 번째
+        symbol_map[key] = True
+        return{
+              "code": "check_once",
+              "message": "check_once, setting once true",
+        }
+    else:
+        return{
+              "code": "check_twice",
+              "message": "check_twice",
+        }
+    
+    print('>>>>> CloseOnce Order Try <<<<<')
+    print(f'     [ticker] : {order_ticker}, [command] : {order_command}')
+    
+    position = getpositions(order_ticker)
+    print(position)
+
+    position_amt = float(position['positionAmt'])
+    position_entry_price = float(position['entryPrice'])
+    position_side = getpoitionside(position_amt)
+
+    if position_side == "ZERO" :
+        return{
+              "code": "error",
+              "message": "buy/sell position_side empty",
+        }
+    
+    print('>>>>> Current Poisition Info <<<<<')
+    print(f'[amt] : {position_amt}, [entry] : {position_entry_price}, [side] : {position_side}')
+
+    order_final_amt = closecommand(order_command, position_amt)
+    order_response =closeOrder(changeside(position_side), float(round(order_final_amt, symbolPrecision(order_ticker))), order_ticker)
+    print(order_response)
+
+    if order_response :
+        return {
+            "code": "success",
+            "messge": "closeonce order excute",
+            "amount" : order_final_amt
+            #"compare_side": compare_side
+        }
+    else :
+        print("order failed")
+        return {
+            "code": "error",
+            "message": "cloeonce order failed",
             #"compare_side" : compare_side
         }
 
