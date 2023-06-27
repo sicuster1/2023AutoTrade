@@ -129,9 +129,12 @@ def webhookCloseOnceReset():
     req_index  = data['strategy']['index']
 
     key = f"{req_ticker}_{req_period}_{req_index}"
-    
-    #symbol_map[key] = False
-    
+    key_reset = f"{req_ticker}_{req_period}"
+    for find in symbol_map:
+        if key_reset in find:
+            symbol_map[find]=False
+            print(find)
+   
     return {
         "code": "success",
         "messge": "closeonce reset order excute",
