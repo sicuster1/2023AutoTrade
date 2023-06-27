@@ -112,8 +112,8 @@ def webhookClose():
         }
     
 ############################### CloseOnce Reset Order ###############################################
-@app.route('/position/closeonce_reset', methods=['POST'])
-def webhookCloseOnce_Reset():
+@app.route('/position/closeonce/reset', methods=['POST'])
+def webhookCloseOnceReset():
     data = json.loads(request.data)
     if data['passphrase'] != config.WEBHOOK_PASSPHRASE:
         return{
@@ -123,17 +123,18 @@ def webhookCloseOnce_Reset():
     
     print(data['ticker'])
     print(data['bar'])
-    print(data['strategy']['order_command'])
-
+ 
     req_ticker = data['ticker']
     req_period = data['strategy']['period']
+    req_index  = data['strategy']['index']
 
-    key = f"{req_ticker}_{req_period}"
-    symbol_map[key] = False
+    key = f"{req_ticker}_{req_period}_{req_index}"
+    
+    #symbol_map[key] = False
     
     return {
         "code": "success",
-        "messge": "closeonce order excute",
+        "messge": "closeonce reset order excute",
         "key" : key
     }
 
@@ -151,13 +152,15 @@ def webhookCloseOnce():
     print(data['ticker'])
     print(data['bar'])
     print(data['strategy']['order_command'])
-    
+    print(data['strategy']['period'])
+    print(data['strategy']['index'])
     
     order_ticker = data['ticker']
     order_command = data['strategy']['order_command']
     order_period = data['strategy']['period']
+    order_close_index = data['strategy']['index']
 
-    key = f"{order_ticker}_{order_period}"
+    key = f"{order_ticker}_{order_period}_{order_close_index}"
     if key not in symbol_map: # 첫 번째
         symbol_map[key] = False
     elif symbol_map[key] == False: # 두 번째
@@ -165,15 +168,17 @@ def webhookCloseOnce():
         return{
               "code": "check_once",
               "message": "check_once, setting once true",
+              "key" : key
         }
     else:
         return{
               "code": "check_twice",
               "message": "check_twice",
+              "key" : key
         }
     
     print('>>>>> CloseOnce Order Try <<<<<')
-    print(f'     [ticker] : {order_ticker}, [command] : {order_command}')
+    print(f'[ticker] : {order_ticker}, [command] : {order_command}')
     
     position = getpositions(order_ticker)
     print(position)
