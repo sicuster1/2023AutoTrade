@@ -89,9 +89,6 @@ def webhookClose():
     print(f'[amt] : {position_amt}, [entry] : {position_entry_price}, [side] : {position_side}')
 
     order_final_amt = closecommand(order_command, position_amt)
-    
-    
-
     order_response =closeOrder(changeside(position_side), float(round(order_final_amt, symbolPrecision(order_ticker))), order_ticker)
 
     print(order_response)
@@ -120,13 +117,14 @@ def webhookCloseOnceReset():
             "code" : "error",
             "message" : "Nice try, invalid passphrase"
         }
-    
+
     print(data['ticker'])
     print(data['bar'])
- 
+
     req_ticker = data['ticker']
     req_period = data['strategy']['period']
     req_index  = data['strategy']['index']
+    order_command = data['strategy']['order_command']
 
     key = f"{req_ticker}_{req_period}_{req_index}"
     key_reset = f"{req_ticker}_{req_period}"
@@ -134,12 +132,44 @@ def webhookCloseOnceReset():
         if key_reset in find:
             symbol_map[find]=False
             print(find)
-   
-    return {
-        "code": "success",
-        "messge": "closeonce reset order excute",
-        "key" : key
-    }
+
+    print('>>>>> CloseOnce/Reset Order Try <<<<<')
+    print(f'[ticker] : {req_ticker}, [command] : {order_command}')
+
+    position = getpositions(req_ticker)
+    print(position)
+
+    position_amt = float(position['positionAmt'])
+    position_entry_price = float(position['entryPrice'])
+    position_side = getpoitionside(position_amt)
+
+    if position_side == "ZERO" :
+        return{
+                "code": "error",
+                "message": "buy/sell position_side empty",
+        }
+
+    print('>>>>> Current Poisition Info <<<<<')
+    print(f'[amt] : {position_amt}, [entry] : {position_entry_price}, [side] : {position_side}')
+
+    order_final_amt = closecommand(order_command, position_amt)
+    order_response =closeOrder(changeside(position_side), float(round(order_final_amt, symbolPrecision(req_ticker))), req_ticker)
+    print(order_response)
+
+    if order_response :
+        return {
+            "code": "success",
+            "messge": "closeonce/Reset order excute",
+            "amount" : order_final_amt
+            #"compare_side": compare_side
+        }
+    else :
+        print("order failed")
+        return {
+            "code": "error",
+            "message": "cloeonce/Reset order failed",
+            #"compare_side" : compare_side
+        }
 
 ############################### CloseOnce Order ###############################################
 @app.route('/position/closeonce', methods=['POST'])
