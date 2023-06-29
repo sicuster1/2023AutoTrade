@@ -196,19 +196,12 @@ def webhookCloseOnce():
     key = f"{order_ticker}_{order_period}_{order_close_index}"
     if key not in symbol_map: # 첫 번째
         symbol_map[key] = False
+        print(f'CloseOnce - {key}, not in symbol map')
     elif symbol_map[key] == False: # 두 번째
         symbol_map[key] = True
-        return{
-              "code": "check_once",
-              "message": "check_once, setting once true",
-              "key" : key
-        }
+        print(f'CloseOnce - {key}, check once calling')
     else:
-        return{
-              "code": "check_twice",
-              "message": "check_twice",
-              "key" : key
-        }
+        print(f'CloseOnce - {key}, already calling API ')
     
     print('>>>>> CloseOnce Order Try <<<<<')
     print(f'[ticker] : {order_ticker}, [command] : {order_command}')
