@@ -202,6 +202,13 @@ def webhookCloseOnce():
         print(f'CloseOnce - {key}, check once calling')
     else:
         print(f'CloseOnce - {key}, already calling API ')
+        return {
+            "code": "error",
+            "messge": "closeonce already calling",
+            "amount" : order_final_amt
+            #"compare_side": compare_side
+        }
+       
     
     print('>>>>> CloseOnce Order Try <<<<<')
     print(f'[ticker] : {order_ticker}, [command] : {order_command}')
