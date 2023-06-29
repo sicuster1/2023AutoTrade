@@ -205,7 +205,6 @@ def webhookCloseOnce():
         return {
             "code": "error",
             "messge": "closeonce already calling",
-            "amount" : order_final_amt
             #"compare_side": compare_side
         }
        
