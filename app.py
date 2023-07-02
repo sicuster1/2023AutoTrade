@@ -107,7 +107,7 @@ def webhookClose():
             "message": "cloeorder failed",
             #"compare_side" : compare_side
         }
-    
+############################### Close Order ###############################################    
 ############################### CloseOnce Reset Order ###############################################
 @app.route('/position/closeonce/reset', methods=['POST'])
 def webhookCloseOnceReset():
@@ -123,15 +123,11 @@ def webhookCloseOnceReset():
 
     req_ticker = data['ticker']
     req_period = data['strategy']['period']
-    req_index  = data['strategy']['index']
     order_command = data['strategy']['order_command']
 
-    key = f"{req_ticker}_{req_period}_{req_index}"
-    key_reset = f"{req_ticker}_{req_period}"
-    for find in symbol_map:
-        if key_reset in find:
-            symbol_map[find]=False
-            print(find)
+    
+    reset_once_call(req_ticker, req_period)
+
 
     print('>>>>> CloseOnce/Reset Order Try <<<<<')
     print(f'[ticker] : {req_ticker}, [command] : {order_command}')
@@ -170,7 +166,7 @@ def webhookCloseOnceReset():
             "message": "cloeonce/Reset order failed",
             #"compare_side" : compare_side
         }
-
+############################### CloseOnce Reset Order ###############################################
 ############################### CloseOnce Order ###############################################
 @app.route('/position/closeonce', methods=['POST'])
 def webhookCloseOnce():
@@ -246,7 +242,7 @@ def webhookCloseOnce():
             "message": "cloeonce order failed",
             #"compare_side" : compare_side
         }
-
+############################### CloseOnce Order ###############################################
 ############################### Check Order ###############################################
 @app.route('/position/check', methods=['POST'])
 def webhookCheck():
@@ -260,6 +256,10 @@ def webhookCheck():
     
     order_side = data['strategy']['order_action'].upper()
     order_ticker = data['ticker']
+    order_period = data['strategy']['period']
+
+
+    reset_once_call(order_ticker, order_period)
    
     print(f'1. Open Poisition Check, Ticker = {order_ticker}, Side = {order_side}')
 
@@ -565,6 +565,15 @@ def symbolPrecision(symbol) :
         return 3
     else:
         return 0
+    
+# OnceCalling 을 초기화    
+def reset_once_call(symbol, period):
+    key_reset = f"{symbol}_{period}"
+    print(f'reset once call trye {key_reset}')
+    for find in symbol_map:
+        if key_reset in find:
+            symbol_map[find]=False
+            print(find)
 
 if __name__ == "__main__":
     app.run()
