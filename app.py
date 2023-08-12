@@ -571,7 +571,7 @@ def getBalance(symbol, lever, division):
     for check_balance in balance:
         if check_balance["asset"] == symbol.upper():
             balance = check_balance["balance"]
-            withdraw = check_balance["withdrawAvailable"]
+            withdraw = check_balance["availableBalance"]
             print(f'request Symbol - {symbol.upper()}, balance = {float(balance)}, withdraw = {withdraw}, lever = {lever}') # Prints 0.0000
             return checkMinimumBalance(balance, withdraw, division)*float(lever)
 
