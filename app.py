@@ -56,7 +56,7 @@ def webhookClose():
             "code" : "error",
             "message" : "Nice try, invalid passphrase"
         }
-
+    print(f"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Close Order - {data['ticker']} >>>>>>>>>>>>>>>>>>>>>>>>>>>")
     print(data['ticker'])
     print(data['bar'])
     print(data['strategy']['order_command'])
@@ -117,9 +117,11 @@ def webhookCloseOnceReset():
             "code" : "error",
             "message" : "Nice try, invalid passphrase"
         }
-
+    
+    print(f"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< CloseOnce Reset Order - {data['ticker']} >>>>>>>>>>>>>>>>>>>>>>>>>>>")
     print(data['ticker'])
     print(data['bar'])
+
 
     req_ticker = data['ticker']
     req_period = data['strategy']['period']
@@ -129,7 +131,7 @@ def webhookCloseOnceReset():
     reset_once_call(req_ticker, req_period)
 
 
-    print('>>>>> CloseOnce/Reset Order Try <<<<<')
+    print('>>>>> 1. CloseOnce/Reset Order Try <<<<<')
     print(f'[ticker] : {req_ticker}, [command] : {order_command}')
 
     position = getpositions(req_ticker)
@@ -145,7 +147,7 @@ def webhookCloseOnceReset():
                 "message": "buy/sell position_side empty",
         }
 
-    print('>>>>> Current Poisition Info <<<<<')
+    print('>>>>> 2.  Current Poisition Info <<<<<')
     print(f'[amt] : {position_amt}, [entry] : {position_entry_price}, [side] : {position_side}')
 
     order_final_amt = closecommand(order_command, position_amt)
@@ -177,7 +179,8 @@ def webhookCloseOnce():
             "code" : "error",
             "message" : "Nice try, invalid passphrase"
         }
-
+    
+    print(f"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< CloseOnce  Order - {data['ticker']} >>>>>>>>>>>>>>>>>>>>>>>>>>>")
     print(data['ticker'])
     print(data['bar'])
     print(data['strategy']['order_command'])
@@ -253,7 +256,7 @@ def webhookCheck():
             "message" : "Nice try, invalid passphrase"
         }
     
-    
+    print(f"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Check Order - {data['ticker']} >>>>>>>>>>>>>>>>>>>>>>>>>>>")
     order_side = data['strategy']['order_action'].upper()
     order_ticker = data['ticker']
     order_period = data['strategy']['period']
@@ -362,8 +365,8 @@ def webhook_reset():
             "code" : "error",
             "message" : "Nice try, invalid passphrase"
         }
-
-    bar_open_pirce = data['bar']['open']
+    
+    print(f"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Reset Order - {data['ticker']} >>>>>>>>>>>>>>>>>>>>>>>>>>>")
     bar_cur_price = data['bar']['high']
     order_side = data['strategy']['order_action'].upper()
     order_command = data['strategy']['order_command'].upper()
@@ -380,7 +383,7 @@ def webhook_reset():
 
     reset_once_call(order_ticker, order_period)
     #order_stop_price = calcstopprice(order_side, bar_cur_price, order_stop_percent, 4)
-
+    
     position = getpositions(order_ticker)
     print(position)
 
