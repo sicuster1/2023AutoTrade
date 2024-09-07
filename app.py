@@ -11,6 +11,8 @@ from time import sleep
 from datetime import datetime
 
 symbol_map: dict = {}
+buy_side_count : int = 0
+sell_side_count : int = 0
 
 class Binance:
     def __init__(self, public_key = '', secret_key = '', sync = False):
@@ -260,9 +262,10 @@ def webhookCheck():
     order_side = data['strategy']['order_action'].upper()
     order_ticker = data['ticker']
     order_period = data['strategy']['period']
+    order_try_max = data['strategy']['order_retry']
 
 
-    reset_once_call(order_ticker, order_period)
+    
    
     print(f'1. Open Poisition Check, Ticker = {order_ticker}, Side = {order_side}')
 
@@ -279,10 +282,9 @@ def webhookCheck():
     
     print(f' 1-1.Check Result [notional] : {position_notional}, [amt] : {position_amt}, [entry] : {position_entry_price}, [side] : {position_side}')
 
-    if order_side != position_side : 
+    if reset_once_call(order_ticker, order_period, order_try_max, order_side, position_side) :
         #webhook_reset()
-        bar_open_pirce = data['bar']['open']
-        bar_cur_price = data['bar']['high']
+        bar_cur_price = data['bar']['close']
         order_side = data['strategy']['order_action'].upper()
         order_command = data['strategy']['order_command'].upper()
         order_division = data['strategy']['order_division']
@@ -293,21 +295,22 @@ def webhookCheck():
         print(order_command)
         print(bar_cur_price)
         print(order_division)
-
-        if position_side.upper() != 'ZERO':
-            #대기중인 주문 종료 
-            binanceClient.synced('futures_cancel_all_open_orders', symbol=order_ticker, recvwindow=60000)
-            # 현재 포지션 종료
-            print('2. Current Position Closed') 
-            close_amt = closecommand('FULL', position_amt)
-            close_responce = closeOrder(changeside(position_side), float(round(close_amt, 0)), order_ticker)
-            if close_responce == False : 
-                print("close order failed")
-                return {
-                    "code": "closeorder",
-                    "error"  : "error",
-                    "message": "close order failed",
-                }
+        
+        if order_side != position_side : 
+            if position_side.upper() != 'ZERO':
+                #대기중인 주문 종료 
+                binanceClient.synced('futures_cancel_all_open_orders', symbol=order_ticker, recvwindow=60000)
+                # 현재 포지션 종료
+                print('2. Current Position Closed') 
+                close_amt = closecommand('FULL', position_amt)
+                close_responce = closeOrder(changeside(position_side), float(round(close_amt, 0)), order_ticker)
+                if close_responce == False : 
+                    print("close order failed")
+                    return {
+                        "code": "closeorder",
+                        "error"  : "error",
+                        "message": "close order failed",
+                    }
 
         # 잔고계산
         
@@ -350,7 +353,7 @@ def webhookCheck():
     else:
         return {
             "code": "fail",
-            "messge": "order == postion same side",
+            "messge": "order == postion same side or max try",
             #"compare_side": compare_side
         }
 ############################### Check Order ###############################################
@@ -660,17 +663,43 @@ def symbolPrecision(symbol) :
         return 0
     
 # OnceCalling 을 초기화    
-def reset_once_call(symbol, period):
-    key_reset = f"{symbol}_{period}"
-    print(f'reset once call trye {key_reset}')
-    for find in symbol_map:
-        if key_reset in find:
-            symbol_map[find]=False
-            print(find)
+def reset_once_call(symbol, period, try_count, order_side, pos_side):
+    print(f'one side max = {try_count}, now try = {try_count}')
+    global buy_side_count
+    global sell_side_count
+    if order_side == pos_side:
+        if order_side == 'BUY':        
+            buy_side_count=buy_side_count+1
+            if buy_side_count > try_count:
+                return False
+            else: 
+                return True
+        if order_side == 'SELL':
+    
+            sell_side_count = sell_side_count + 1
+            if sell_side_count > try_count:
+                return False
+            else: 
+                return True
+    else :
+        if order_side == 'BUY':
+            sell_side_count = 0
+            return True
+        if order_side == 'SELL' :
+            buy_side_count = 0
+            return True
+
 
 if __name__ == "__main__":
     app.run()
 
+    
+# key_reset = f"{symbol}_{period}"
+# print(f'reset once call try {key_reset}')
+# for find in symbol_map:
+#     if key_reset in find:
+#         symbol_map[find]=False
+#         print(find)
 
 # @app.route('/position/resetopen', methods=['POST'])
 # def webhook_reset():
