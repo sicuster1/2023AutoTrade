@@ -265,7 +265,7 @@ def webhookCheck():
     order_try_max = data['strategy']['order_retry']
 
     ticker = binanceClient.b.get_symbol_ticker(symbol=order_ticker)
-    order_price = ticker['price']
+    order_price = float(ticker['price'])
    
     print(f'1. Open Poisition Check, Ticker = {order_ticker}, Side = {order_side}, Price = {order_price}')
 
