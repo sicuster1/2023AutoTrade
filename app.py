@@ -264,10 +264,10 @@ def webhookCheck():
     order_period = data['strategy']['period']
     order_try_max = data['strategy']['order_retry']
 
-
-    
+    ticker = binanceClient.b.get_symbol_ticker(symbol=order_ticker)
+    order_price = ticker['price']
    
-    print(f'1. Open Poisition Check, Ticker = {order_ticker}, Side = {order_side}')
+    print(f'1. Open Poisition Check, Ticker = {order_ticker}, Side = {order_side}, Price = {order_price}')
 
   
     position = getpositions(order_ticker)
@@ -284,7 +284,7 @@ def webhookCheck():
 
     if reset_once_call(order_ticker, order_period, order_try_max, order_side, position_side) :
         #webhook_reset()
-        bar_cur_price = data['bar']['close']
+        bar_cur_price = order_price #data['bar']['close']
         order_side = data['strategy']['order_action'].upper()
         order_command = data['strategy']['order_command'].upper()
         order_division = data['strategy']['order_division']
