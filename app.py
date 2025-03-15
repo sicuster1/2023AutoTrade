@@ -678,30 +678,32 @@ def symbolPrecision(symbol) :
         return 0
     
 # OnceCalling 을 초기화    
-def reset_once_call(symbol, period, try_count, order_side, pos_side):
-    print(f'one side max = {try_count}, now try = {try_count}')
+def reset_once_call(symbol, period, try_max, order_side, pos_side):
     global buy_side_count
     global sell_side_count
     if order_side == pos_side:
         if order_side == 'BUY':        
             buy_side_count=buy_side_count+1
-            if buy_side_count > try_count:
+            print(f'one side max = {try_max}, now try = {buy_side_count}')
+            if buy_side_count >= try_max:
                 return False
             else: 
                 return True
         if order_side == 'SELL':
-    
             sell_side_count = sell_side_count + 1
-            if sell_side_count > try_count:
+            print(f'one side max = {try_max}, now try = {sell_side_count}')
+            if sell_side_count >= try_max:
                 return False
             else: 
                 return True
     else :
         if order_side == 'BUY':
             sell_side_count = 0
+            print(f'sell_side_count set 0')
             return True
         if order_side == 'SELL' :
             buy_side_count = 0
+            print(f'buy_side_count set 0')
             return True
 
 
