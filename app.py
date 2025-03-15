@@ -259,10 +259,12 @@ def webhookCheck():
         }
     
     print(f"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Check Order - {data['ticker']} >>>>>>>>>>>>>>>>>>>>>>>>>>>")
-    order_side = data['strategy']['order_action'].upper()
+    order_side = data['strategy']['action'].upper()
     order_ticker = data['ticker']
     order_period = data['strategy']['period']
-    order_try_max = data['strategy']['order_retry']
+    order_fix = data['strategy']['fix'] # 주문에서 고정된 금액으로 할지? 자동을 잔액에서 계산인지 판단
+    order_amount = data['strategy']['amount'] # 고정주문시 사용되는 주문금액
+    order_try_max = data['strategy']['retry']
 
     ticker = binanceClient.b.get_symbol_ticker(symbol=order_ticker)
     order_price = float(ticker['price'])
@@ -277,7 +279,7 @@ def webhookCheck():
     position_side = getpoitionside(position_amt)
     position_notional = float(position['notional'])
     position_entry_price = float(position['entryPrice'])
-    position_leverage = position['leverage']
+    position_leverage = float(position['leverage'])
 
     
     print(f' 1-1.Check Result [notional] : {position_notional}, [amt] : {position_amt}, [entry] : {position_entry_price}, [side] : {position_side}')
@@ -285,9 +287,9 @@ def webhookCheck():
     if reset_once_call(order_ticker, order_period, order_try_max, order_side, position_side) :
         #webhook_reset()
         bar_cur_price = order_price #data['bar']['close']
-        order_side = data['strategy']['order_action'].upper()
-        order_command = data['strategy']['order_command'].upper()
-        order_division = data['strategy']['order_division']
+        order_side = data['strategy']['action'].upper()
+        order_command = data['strategy']['command'].upper()
+        order_division = data['strategy']['division']
         order_ticker = data['ticker']
 
         print(order_ticker)
@@ -295,6 +297,7 @@ def webhookCheck():
         print(order_command)
         print(bar_cur_price)
         print(order_division)
+        print(order_amount)
         
         if order_side != position_side : 
             if position_side.upper() != 'ZERO':
@@ -314,11 +317,19 @@ def webhookCheck():
 
         # 잔고계산
         
-        usdt_balance = float(calcBalanceCommand('USDT', position_leverage, order_command, order_division))
-        print(f'>>>>> usdt * leverage = {usdt_balance}')
-        order_final_amt_round = usdt_balance / bar_cur_price
-        order_final_amt = float(round(order_final_amt_round, symbolPrecision(order_ticker)))    
-        print(f'3. Calculate Final Order, usdt_balance = {usdt_balance}, order_final_amt = {order_final_amt}')
+        if order_fix == 'auto':
+            usdt_balance = float(calcBalanceCommand('USDT', position_leverage, order_command, order_division))
+            print(f'>>>>> usdt * leverage = {usdt_balance}')
+            order_final_amt_round = usdt_balance / bar_cur_price
+            order_final_amt = float(round(order_final_amt_round, symbolPrecision(order_ticker)))    
+            print(f'3. Calculate Final Order, usdt_balance = {usdt_balance}, order_final_amt = {order_final_amt}')    
+        elif order_fix == 'fix' :
+            usdt_balance = float(calcFixOrderCommand(order_amount, position_leverage, order_division))
+            print(f'>>>>> usdt * leverage / orderdivison = {usdt_balance}')
+            order_final_amt_round = usdt_balance / bar_cur_price
+            order_final_amt = float(round(order_final_amt_round, symbolPrecision(order_ticker)))    
+            print(f'3. Calculate Final Order, usdt_balance = {usdt_balance}, order_final_amt = {order_final_amt}')    
+        
         # 테스트 시 사용 Amount
         # order_final_amt = 1000
 
@@ -394,7 +405,7 @@ def webhook_reset():
     position_notional = float(position['notional'])
     position_entry_price = float(position['entryPrice'])
     position_side = getpoitionside(position_amt)
-    position_leverage = position['leverage']
+    position_leverage = float(position['leverage'])
 
 
     print('>>>>> 2. Current Open Order Info <<<<<')    
@@ -555,7 +566,7 @@ def closecommand(command, positonAmt) :
 
 
 
-#풀시드 기준 명령(FULL/HALF/QUOT/10th)
+# 자동 잔액시드 기준 명령(FULL/HALF/QUOT/10th)
 def calcBalanceCommand(symbol, lever, comm, division):
     cur_balance = getBalance(symbol, lever, division)
     if comm.upper() == '10TH':
@@ -566,6 +577,10 @@ def calcBalanceCommand(symbol, lever, comm, division):
         return (cur_balance/2)-10
     elif comm.upper() == 'FULL':
         return cur_balance-(cur_balance /50)
+
+#고정 주문시드 기준 명령
+def calcFixOrderCommand(amount, lever, division):
+    return (amount*lever)/division
 
 #풀시드 풀 주문
 def getBalance(symbol, lever, division):
