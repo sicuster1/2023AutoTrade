@@ -11,9 +11,32 @@ from time import sleep
 from datetime import datetime
 
 symbol_map: dict = {}
-buy_side_count : int = 0
-sell_side_count : int = 0
 
+class Count:
+    def __init__(self, sell_count, buy_count):
+        self.sell_count = sell_count
+        self.buy_count = buy_count
+    
+    def increageBuy(self):
+        self.buy_count = self.buy_count + 1
+
+    def increageSell(self):
+        self.sell_count = self.sell_count + 1
+    
+    def getBuyCount(self):
+        return self.buy_count
+
+    def getSellCount(self):
+        return self.sell_count
+    
+    def setZeroBuy(self):
+        self.buy_count = 1
+
+    def setZeroSell(self):
+        self.sell_count = 1
+
+
+      
 class Binance:
     def __init__(self, public_key = '', secret_key = '', sync = False):
         self.time_offset = 0
@@ -43,6 +66,8 @@ app = Flask(__name__)
 app.debug=True
 
 binanceClient = Binance(config.API_KEY, config.API_SECRET, True)
+
+_TryCount = Count(1, 1) 
 
 @app.route('/')
 def hello_world():
@@ -284,7 +309,7 @@ def webhookCheck():
     
     print(f' 1-1.Check Result [notional] : {position_notional}, [amt] : {position_amt}, [entry] : {position_entry_price}, [side] : {position_side}')
 
-    if reset_once_call(order_ticker, order_period, order_try_max, order_side, position_side) :
+    if reset_once_call(order_ticker, order_try_max, order_side, position_side) :
         #webhook_reset()
         bar_cur_price = order_price #data['bar']['close']
         order_side = data['strategy']['action'].upper()
@@ -314,6 +339,7 @@ def webhookCheck():
                         "error"  : "error",
                         "message": "close order failed",
                     }
+        
 
         # 잔고계산
         
@@ -678,31 +704,40 @@ def symbolPrecision(symbol) :
         return 0
     
 # OnceCalling 을 초기화    
-def reset_once_call(symbol, period, try_max, order_side, pos_side):
-    global buy_side_count
-    global sell_side_count
+def reset_once_call(symbol, try_max, order_side, pos_side):
+    #global buy_side_count
+    #global sell_side_count
     if order_side == pos_side:
         if order_side == 'BUY':        
-            buy_side_count=buy_side_count+1
-            print(f'one side max = {try_max}, now try = {buy_side_count}')
-            if buy_side_count >= try_max:
+            #buy_side_count=buy_side_count+1
+            _TryCount.increageBuy()
+            print(f'one side max = {try_max}, now try = {_TryCount.getBuyCount()}')
+            if _TryCount.getBuyCount() > try_max:
                 return False
+            elif _TryCount.getBuyCount() == 2 or _TryCount.getBuyCount() == 4 or _TryCount.getBuyCount() == 5 or _TryCount.getBuyCount() == 6 :
+                print(f'limit order count = {try_max}, now try = {_TryCount.getBuyCount()}')
+                return False    
             else: 
                 return True
         if order_side == 'SELL':
-            sell_side_count = sell_side_count + 1
-            print(f'one side max = {try_max}, now try = {sell_side_count}')
-            if sell_side_count >= try_max:
+            #sell_side_count = sell_side_count + 1
+            _TryCount.increageSell()
+            print(f'one side max = {try_max}, now try = {_TryCount.getSellCount()}')
+            if _TryCount.getSellCount() > try_max:
                 return False
+            elif _TryCount.getSellCount() == 2 or _TryCount.getSellCount() == 4 or _TryCount.getSellCount() == 5 or _TryCount.getSellCount() == 6 :
+                print(f'limit order count = {try_max}, now try = {_TryCount.getSellCount()}')
+                return False    
             else: 
                 return True
     else :
         if order_side == 'BUY':
-            sell_side_count = 0
+            #sell_side_count = 0
+            _TryCount.setZeroBuy()
             print(f'sell_side_count set 0')
             return True
         if order_side == 'SELL' :
-            buy_side_count = 0
+            _TryCount.setZeroSell()
             print(f'buy_side_count set 0')
             return True
 
