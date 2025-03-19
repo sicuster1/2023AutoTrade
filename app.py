@@ -30,10 +30,10 @@ class Count:
         return self.sell_count
     
     def setZeroBuy(self):
-        self.buy_count = 1
+        self.buy_count = 0
 
     def setZeroSell(self):
-        self.sell_count = 1
+        self.sell_count = 0
 
 
       
@@ -67,7 +67,7 @@ app.debug=True
 
 binanceClient = Binance(config.API_KEY, config.API_SECRET, True)
 
-_TryCount = Count(1, 1) 
+_TryCount = Count(0, 0) 
 
 @app.route('/')
 def hello_world():
@@ -283,7 +283,7 @@ def webhookCheck():
             "message" : "Nice try, invalid passphrase"
         }
     
-    print(f"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Check Order - {data['ticker']} >>>>>>>>>>>>>>>>>>>>>>>>>>>")
+    print(f"############################### Check Order Start - {data['ticker']} ###############################")
     order_side = data['strategy']['action'].upper()
     order_ticker = data['ticker']
     order_period = data['strategy']['period']
@@ -707,39 +707,74 @@ def symbolPrecision(symbol) :
 def reset_once_call(symbol, try_max, order_side, pos_side):
     #global buy_side_count
     #global sell_side_count
-    if order_side == pos_side:
-        if order_side == 'BUY':        
-            #buy_side_count=buy_side_count+1
-            _TryCount.increageBuy()
-            print(f'one side max = {try_max}, now try = {_TryCount.getBuyCount()}')
-            if _TryCount.getBuyCount() > try_max:
+
+    _TryCount.increageBuy()
+    _TryCount.increageSell()
+
+    print(f'Buy - side max = {try_max}, now try = {_TryCount.getBuyCount()}')
+    print(f'Sell - side max = {try_max}, now try = {_TryCount.getSellCount()}')
+
+    if order_side == 'BUY':        
+        if pos_side =='SELL':     
+            _TryCount.setZeroSell()
+            print(f'sell_side_count set 0')
+            return True
+        else:
+            if _TryCount.getBuyCount() >= try_max:
                 return False
             elif _TryCount.getBuyCount() == 2 or _TryCount.getBuyCount() == 4 or _TryCount.getBuyCount() == 5 or _TryCount.getBuyCount() == 6 :
                 print(f'limit order count = {try_max}, now try = {_TryCount.getBuyCount()}')
                 return False    
             else: 
                 return True
-        if order_side == 'SELL':
-            #sell_side_count = sell_side_count + 1
-            _TryCount.increageSell()
-            print(f'one side max = {try_max}, now try = {_TryCount.getSellCount()}')
-            if _TryCount.getSellCount() > try_max:
+    
+    if order_side == 'SELL':        
+        if pos_side =='BUY':     
+            _TryCount.setZeroBuy()
+            print(f'buy_side_count set 0')
+            return True
+        else:
+            if _TryCount.getSellCount() >= try_max:
                 return False
             elif _TryCount.getSellCount() == 2 or _TryCount.getSellCount() == 4 or _TryCount.getSellCount() == 5 or _TryCount.getSellCount() == 6 :
                 print(f'limit order count = {try_max}, now try = {_TryCount.getSellCount()}')
                 return False    
             else: 
                 return True
-    else :
-        if order_side == 'BUY':
-            #sell_side_count = 0
-            _TryCount.setZeroBuy()
-            print(f'sell_side_count set 0')
-            return True
-        if order_side == 'SELL' :
-            _TryCount.setZeroSell()
-            print(f'buy_side_count set 0')
-            return True
+
+    # if order_side == pos_side:
+    #     if order_side == 'BUY':        
+    #         #buy_side_count=buy_side_count+1
+    #         _TryCount.increageBuy()
+    #         print(f'one side max = {try_max}, now try = {_TryCount.getBuyCount()}')
+    #         if _TryCount.getBuyCount() > try_max:
+    #             return False
+    #         elif _TryCount.getBuyCount() == 2 or _TryCount.getBuyCount() == 4 or _TryCount.getBuyCount() == 5 or _TryCount.getBuyCount() == 6 :
+    #             print(f'limit order count = {try_max}, now try = {_TryCount.getBuyCount()}')
+    #             return False    
+    #         else: 
+    #             return True
+    #     if order_side == 'SELL':
+    #         #sell_side_count = sell_side_count + 1
+    #         _TryCount.increageSell()
+    #         print(f'one side max = {try_max}, now try = {_TryCount.getSellCount()}')
+    #         if _TryCount.getSellCount() > try_max:
+    #             return False
+    #         elif _TryCount.getSellCount() == 2 or _TryCount.getSellCount() == 4 or _TryCount.getSellCount() == 5 or _TryCount.getSellCount() == 6 :
+    #             print(f'limit order count = {try_max}, now try = {_TryCount.getSellCount()}')
+    #             return False    
+    #         else: 
+    #             return True
+    # else :
+    #     if order_side == 'BUY':
+    #         #sell_side_count = 0
+    #         _TryCount.setZeroBuy()
+    #         print(f'sell_side_count set 0')
+    #         return True
+    #     if order_side == 'SELL' :
+    #         _TryCount.setZeroSell()
+    #         print(f'buy_side_count set 0')
+    #         return True
 
 
 if __name__ == "__main__":
