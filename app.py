@@ -708,39 +708,38 @@ def reset_once_call(symbol, try_max, order_side, pos_side):
     #global buy_side_count
     #global sell_side_count
 
+
+   
     _TryCount.increageBuy()
     _TryCount.increageSell()
 
     print(f'Buy - side max = {try_max}, now try = {_TryCount.getBuyCount()}')
     print(f'Sell - side max = {try_max}, now try = {_TryCount.getSellCount()}')
 
+    if order_side != pos_side :
+        _TryCount.setZeroSell()
+        _TryCount.setZeroBuy()
+        print(f'all side_count set 0')
+        return True
+
+
     if order_side == 'BUY':        
-        if pos_side =='SELL':     
-            _TryCount.setZeroSell()
-            print(f'sell_side_count set 0')
+        if _TryCount.getBuyCount() >= try_max:
+            return False
+        elif _TryCount.getBuyCount() == 2 or _TryCount.getBuyCount() == 4 or _TryCount.getBuyCount() == 5 or _TryCount.getBuyCount() == 6 :
+            print(f'limit order count = {try_max}, now try = {_TryCount.getBuyCount()}')
+            return False    
+        else: 
             return True
-        else:
-            if _TryCount.getBuyCount() >= try_max:
-                return False
-            elif _TryCount.getBuyCount() == 2 or _TryCount.getBuyCount() == 4 or _TryCount.getBuyCount() == 5 or _TryCount.getBuyCount() == 6 :
-                print(f'limit order count = {try_max}, now try = {_TryCount.getBuyCount()}')
-                return False    
-            else: 
-                return True
     
     if order_side == 'SELL':        
-        if pos_side =='BUY':     
-            _TryCount.setZeroBuy()
-            print(f'buy_side_count set 0')
+        if _TryCount.getSellCount() >= try_max:
+            return False
+        elif _TryCount.getSellCount() == 2 or _TryCount.getSellCount() == 4 or _TryCount.getSellCount() == 5 or _TryCount.getSellCount() == 6 :
+            print(f'limit order count = {try_max}, now try = {_TryCount.getSellCount()}')
+            return False    
+        else: 
             return True
-        else:
-            if _TryCount.getSellCount() >= try_max:
-                return False
-            elif _TryCount.getSellCount() == 2 or _TryCount.getSellCount() == 4 or _TryCount.getSellCount() == 5 or _TryCount.getSellCount() == 6 :
-                print(f'limit order count = {try_max}, now try = {_TryCount.getSellCount()}')
-                return False    
-            else: 
-                return True
 
     # if order_side == pos_side:
     #     if order_side == 'BUY':        
