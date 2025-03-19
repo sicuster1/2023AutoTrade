@@ -58,7 +58,7 @@ app.debug=True
 
 binanceClient = Binance(config.API_KEY, config.API_SECRET, True)
 
-_TryCount = Count(0, 0) 
+_TryCount = Count(0) 
 
 @app.route('/')
 def hello_world():
