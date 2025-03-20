@@ -22,8 +22,8 @@ class Count:
     def getCount(self):
         return self.try_count
 
-    def setCount(self, setCount):
-        self.buy_count = setcount
+    def setCount(self, set_count):
+        self.buy_count = set_count
 
  
 
