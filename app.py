@@ -23,7 +23,7 @@ class Count:
         return self.try_count
 
     def setCount(self, set_count):
-        self.buy_count = set_count
+        self.try_count = set_count
 
  
 
