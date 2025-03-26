@@ -706,9 +706,9 @@ def reset_once_call(symbol, try_max, order_side, pos_side):
         print(f'not same side setCount(1)')
         return True
 
-    if _TryCount.getCount() >= try_max:
+    if _TryCount.getCount() > try_max:
         return False
-    elif _TryCount.getCount() == 2 or _TryCount.getCount() == 4 or _TryCount.getCount() == 5 or _TryCount.getCount() == 6 :
+    elif _TryCount.getCount() == 2 or _TryCount.getCount() == 3 or _TryCount.getCount() == 5 or _TryCount.getCount() == 6 :
         print(f'limit order count = {try_max}, now try = {_TryCount.getCount()}')
         return False    
     else: 
